@@ -327,6 +327,31 @@ function addNormalisasiSubKriteria($nama, $statusRumah, $luasBangunan, $jenisLan
     header("Location: ../index.php");
 }
 
+function getNormalisasiSubkriteria()
+{
+    global $mySqliCon;
+    $query = "
+            SELECT 
+                ns.id_peserta, 
+                p.nama, 
+                ns.status_rumah, 
+                ns.luas_bangunan, 
+                ns.jenis_lantai, 
+                ns.jenis_dinding, 
+                ns.pendidikan, 
+                ns.pekerjaan, 
+                ns.tanggungan
+            FROM 
+                normalisasi_subkriteria ns
+            INNER JOIN 
+                peserta p 
+            ON 
+                ns.id_peserta = p.id
+            ";
+
+    return mysqli_query($mySqliCon, $query);
+}
+
 function addViSi($id_peserta, $si, $vi)
 {
     global $pdo;
@@ -409,7 +434,7 @@ function getColumnUSmart()
     $resultColumns = mysqli_query($mySqliCon, "SHOW COLUMNS FROM utilitas_metode_smart");
     if ($resultColumns && mysqli_num_rows($resultColumns) > 0) {
         while ($col = mysqli_fetch_assoc($resultColumns)) {
-            if ($col['Field'] !== 'id' && $col['Field'] !== 'ranking') { // Kecualikan kolom 'id' dan 'ranking
+            if ($col['Field'] !== 'id' && $col['Field'] !== 'total') { // Kecualikan kolom 'id' dan 'total'
                 if ($col['Field'] == 'id_peserta') {
                     $columns[] = 'Nama'; // Ganti 'id_peserta' dengan 'Nama'
                 } else {
@@ -420,6 +445,80 @@ function getColumnUSmart()
     }
 
     return $columns;
+}
+
+// get kolom SKWN (Tabel Subkriteria Without Nama)
+function getColumnSKWN()
+{
+    global $mySqliCon;
+
+    $columns = [];
+    $resultColumns = mysqli_query($mySqliCon, "SHOW COLUMNS FROM normalisasi_subkriteria");
+    if ($resultColumns && mysqli_num_rows($resultColumns) > 0) {
+        while ($col = mysqli_fetch_assoc($resultColumns)) {
+            // if ($col['Field'] !== 'id' && $col['Field'] !== 'id_peserta' && !in_array($col, ['Nama'])) { // Kecualikan kolom 'id', 'id_peserta', dan 'nama'
+            //     $columns[] = $col['Field']; // Tambahkan kolom lain apa adanya
+            // }
+            $fieldName = $col['Field'];
+
+            // Kecualikan kolom berdasarkan nama langsung atau pola
+            if (!in_array($fieldName, ['id', 'id_peserta', 'nama']) && // Nama langsung
+                !preg_match('/^(child_|rel_)/', $fieldName)) {         // Pola tertentu
+                $columns[] = $fieldName; // Tambahkan kolom lain apa adanya
+            }
+        }
+    }
+
+    return $columns;
+}
+
+function addUSmart($id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan)
+{
+    global $pdo;
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilitas_metode_smart WHERE id_peserta = ? AND total = ?");
+    $stmt->execute([$id_peserta, 0]);
+    $exists = $stmt->fetchColumn();
+
+    if ($exists == 0) {
+        $stmt = $pdo->prepare("INSERT utilitas_metode_smart (id_peserta, u_status, u_luas_bangunan, u_jenis_lantai, u_jenis_dinding, u_pendidikan, u_pekerjaan, u_tanggungan, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, 0]);
+    }
+
+    if ($exists != 0) {
+        exit;
+    }
+}
+
+function maxU($column)
+{
+    global $mySqliCon;
+
+    $query = "SELECT MAX($column) AS utilitas FROM normalisasi_subkriteria";
+    $resultCount = mysqli_query($mySqliCon, $query);
+    if ($resultCount) {
+        $row = mysqli_fetch_assoc($resultCount);
+        $nilaiMax = $row['utilitas'];
+    } else {
+        echo "Error: " . mysqli_error($mySqliCon);
+    }
+
+    return $nilaiMax;
+}
+
+function minU($column)
+{
+    global $mySqliCon;
+    $query = "SELECT MIN($column) AS utilitas FROM normalisasi_subkriteria";
+    $resultCount = mysqli_query($mySqliCon, $query);
+    if ($resultCount) {
+        $row = mysqli_fetch_assoc($resultCount);
+        $nilaiMin = $row['utilitas'];
+    } else {
+        echo "Error: " . mysqli_error($mySqliCon);
+    }
+
+    return $nilaiMin;
 }
 
 // Log out part

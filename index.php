@@ -642,27 +642,7 @@ if (!isset($_SESSION)) {
                             </tfoot>
                             <tbody>
                               <?php
-                              $query = "
-                                        SELECT 
-                                            ns.id_peserta, 
-                                            p.nama, 
-                                            ns.status_rumah, 
-                                            ns.luas_bangunan, 
-                                            ns.jenis_lantai, 
-                                            ns.jenis_dinding, 
-                                            ns.pendidikan, 
-                                            ns.pekerjaan, 
-                                            ns.tanggungan
-                                        FROM 
-                                            normalisasi_subkriteria ns
-                                        INNER JOIN 
-                                            peserta p 
-                                        ON 
-                                            ns.id_peserta = p.id
-                                      ";
-
-                              global $mySqliCon;
-                              $result = mysqli_query($mySqliCon, $query);
+                              $result = getNormalisasiSubkriteria();
                               $countRow = $result ? mysqli_num_rows($result) : 0;
 
                               if ($result && $countRow > 0) {
@@ -810,61 +790,44 @@ if (!isset($_SESSION)) {
                           <table id="basic-datatables" class="display table table-striped table-hover dataTable" role="grid" aria-describedby="add-row_info">
                             <thead>
                               <tr role="row">
+                                <th>No</th>
                                 <?php
-                                $columns = [];
-                                $resultColumns = mysqli_query($mySqliCon, "SHOW COLUMNS FROM utilitas_metode_smart");
-                                if ($resultColumns && mysqli_num_rows($resultColumns) > 0) {
-                                  while ($col = mysqli_fetch_assoc($resultColumns)) {
-                                    if ($col['Field'] !== 'id' && $col['Field'] !== 'ranking') { // Kecualikan kolom 'id' dan 'ranking
-                                      if ($col['Field'] == 'id_peserta') {
-                                        $columns[] = 'Nama'; // Ganti 'id_peserta' dengan 'Nama'
-                                      } else {
-                                        $columns[] = $col['Field']; // Tambahkan kolom lain apa adanya
-                                      }
-                                    }
-                                  }
-                                }
-                                ?>
-                                <?php foreach ($columns as $column): ?>
+                                $columns = getColumnUSmart();
+                                foreach ($columns as $column): ?>
                                   <th><?php echo ucwords($column); ?></th>
                                 <?php endforeach; ?>
                               </tr>
                             </thead>
-                            <tfoot>
-                              <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                              </tr>
-                            </tfoot>
                             <tbody>
                               <?php
-                              global $mySqliCon;
-                              $query = "SELECT SUM(u_status) AS vektorSi FROM utilitas_metode_smart";
-                              $resultCount = mysqli_query($mySqliCon, $query);
-                              if ($resultCount) {
-                                $row = mysqli_fetch_assoc($resultCount);
-                                $totalBobot = $row['vektorSi'];
-                              } else {
-                                echo "Error: " . mysqli_error($mySqliCon);
-                              }
-
                               $i = 0;
-                              $result = getSmart();
+                              $result = getNormalisasiSubkriteria();
                               if ($result && mysqli_num_rows($result) > 0) {
+
                                 while ($a = mysqli_fetch_array($result)) {
                                   $i += 1;
                                   $idPeserta = $a['id_peserta'];
                                   $namaPeserta = $a['nama'];
-                                  $si = $a['si']; // nilai si hasil perhitungan normalisasi data
-                                  $vi = $si / $totalBobot; // nilai vi di bagi seluruh nilai si
+                                  $u_status = ((($a['status_rumah'] - minU('status_rumah')) / (maxU('status_rumah') - minU('status_rumah'))) * 100) / 100;
+                                  $u_luas_bangunan = ((($a['luas_bangunan'] - minU('luas_bangunan')) / (maxU('luas_bangunan') - minU('luas_bangunan'))) * 100) / 100;
+                                  $u_jenis_lantai = ((($a['jenis_lantai'] - minU('jenis_lantai')) / (maxU('jenis_lantai') - minU('jenis_lantai'))) * 100) / 100;
+                                  $u_jenis_dinding = ((($a['jenis_dinding'] - minU('jenis_dinding')) / (maxU('jenis_dinding') - minU('jenis_dinding'))) * 100) / 100;
+                                  $u_pendidikan = ((($a['pendidikan'] - minU('pendidikan')) / (maxU('pendidikan') - minU('pendidikan'))) * 100) / 100;
+                                  $u_pekerjaan = ((($a['pekerjaan'] - minU('pekerjaan')) / (maxU('pekerjaan') - minU('pekerjaan'))) * 100) / 100;
+                                  $u_tanggungan = (((maxU('tanggungan') - $a['tanggungan']) / (maxU('tanggungan') - minU('tanggungan'))) * 100) / 100;
 
-                                  addVi($idPeserta, $vi); // Menyimpan ke tabel 
-                              ?>
+                                  // addVi($idPeserta, $vi); // Menyimpan ke tabel 
+                                ?>
                                   <tr role="row" class="odd">
                                     <td><?php echo ucwords(str_replace('_', ' ', $i)); ?></td>
                                     <td><?php echo ucwords(str_replace('_', ' ', $namaPeserta)); ?></td>
-                                    <td><?php echo ucwords(str_replace('_', ' ', $si)); ?></td>
+                                    <td><?php echo number_format($u_status, 3); ?></td>
+                                    <td><?php echo number_format($u_luas_bangunan, 3); ?></td>
+                                    <td><?php echo number_format($u_jenis_lantai, 3); ?></td>
+                                    <td><?php echo number_format($u_jenis_dinding, 3); ?></td>
+                                    <td><?php echo number_format($u_pendidikan, 3); ?></td>
+                                    <td><?php echo number_format($u_pekerjaan, 3); ?></td>
+                                    <td><?php echo number_format($u_tanggungan, 3); ?></td>
                                   </tr>
                               <?php
                                 }
@@ -877,68 +840,6 @@ if (!isset($_SESSION)) {
                         </div>
                       </div>
                       <!-- End of Utilitas Metode SMART -->
-                      <!-- Nilai AKhir Metode SMART -->
-                      <h5>Nilai Akhir</h5>
-                      <div class="row">
-                        <div class="col-sm-12">
-                          <table id="basic-datatables" class="display table table-striped table-hover dataTable" role="grid" aria-describedby="add-row_info">
-                            <thead>
-                              <tr role="row">
-                                <?php
-                                $columns = getColumnUSmart();
-                                foreach ($columns as $column):
-                                ?>
-                                  <th><?php echo ucwords(str_replace('u_', '', $column)); ?></th>
-                                <?php endforeach; ?>
-                              </tr>
-                            </thead>
-                            <tfoot>
-                              <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                              </tr>
-                            </tfoot>
-                            <tbody>
-                              <?php
-                              global $mySqliCon;
-                              $query = "SELECT SUM(si) AS vektorSi FROM vektor_vi_si";
-                              $resultCount = mysqli_query($mySqliCon, $query);
-                              if ($resultCount) {
-                                $row = mysqli_fetch_assoc($resultCount);
-                                $totalBobot = $row['vektorSi'];
-                              } else {
-                                echo "Error: " . mysqli_error($mySqliCon);
-                              }
-
-                              $i = 0;
-                              $result = getSmart();
-                              if ($result && mysqli_num_rows($result) > 0) {
-                                while ($a = mysqli_fetch_array($result)) {
-                                  $i += 1;
-                                  $idPeserta = $a['id_peserta'];
-                                  $namaPeserta = $a['nama'];
-                                  $si = $a['si']; // nilai si hasil perhitungan normalisasi data
-                                  $vi = $si / $totalBobot; // nilai vi di bagi seluruh nilai si
-
-                                  addVi($idPeserta, $vi); // Menyimpan ke tabel mySqli
-                              ?>
-                                  <tr role="row" class="odd">
-                                    <td><?php echo ucwords(str_replace('_', ' ', $i)); ?></td>
-                                    <td><?php echo ucwords(str_replace('_', ' ', $namaPeserta)); ?></td>
-                                    <td><?php echo ucwords(str_replace('_', ' ', $si)); ?></td>
-                                  </tr>
-                              <?php
-                                }
-                              } else {
-                                echo "<p class='text-center'>Tidak ada data kriteria tersedia.</p>";
-                              }
-                              ?>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                      <!-- End of Nilai Akhir Metode SMART -->
                     </div>
                   </div>
                 </div>
