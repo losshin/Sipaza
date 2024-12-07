@@ -311,7 +311,7 @@ if (!isset($_SESSION)) {
                         $nama = $a['nama'];
                         $bobot = $a['bobot'];
                         $bobotWj = $bobot / $totalBobot;
-
+                        updateKriteria($id, $bobotWj);
                         require 'components/modal.php';
                     ?>
                         <div class="item-list">
@@ -362,80 +362,6 @@ if (!isset($_SESSION)) {
               </div>
             </div>
             <!-- End of Tabel Kriteria -->
-
-            <!-- Tabel SubKriteria -->
-            <div class="col-md-4">
-              <div class="card card-round">
-                <div class="card-body">
-                  <div class="card-head-row card-tools-still-right">
-                    <div class="card-title">SubKriteria</div>
-                    <div class="card-tools">
-                      <div class="dropdown">
-                        <button class="btn btn-icon btn-clean me-0" data-bs-toggle="modal" data-bs-target="#addSubKriteria">
-                          <i class="fas fa-plus"></i>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card-list py-4">
-                    <?php
-                    // Hitung Total Bobot
-                    $query = "SELECT SUM(status_rumah) AS total_bobot FROM normalisasi_subkriteria";
-                    $resultCount = mysqli_query($mySqliCon, $query);
-
-                    if ($resultCount) {
-                      $row = mysqli_fetch_assoc($resultCount);
-                      $totalBobot = $row['total_bobot'];
-                    } else {
-                      echo "Error: " . mysqli_error($mySqliCon);
-                    }
-                    $result = getData('normalisasi_subkriteria', 0);
-                    if ($result && mysqli_num_rows($result) > 0) {
-                      while ($a = mysqli_fetch_array($result)) {
-                        $id = $a['id'];
-                        $namaPeserta = $a['id_peserta'];
-                        $statusRumah = $a['status_rumah'];
-
-                        require 'components/modal.php';
-                    ?>
-
-                        <div class="item-list">
-                          <div class="info-user ms-3">
-                            <div class="username"><?php echo ucwords(str_replace('_', ' ', $namaPeserta)); ?></div>
-                            <div class="status"><?php echo 'bobot: ', $bobot; ?></div>
-                          </div>
-
-                          <center>
-                            <!-- Open Edit Kriteria Modal -->
-                            <button class="btn btn-icon btn-link op-8 me-1" data-bs-toggle="modal" data-bs-target="#editKriteria<?php echo $id ?>">
-                              <i class="far fa-edit"></i>
-                            </button>
-                            <!-- End Edit Kriteria Modal -->
-
-                            <!-- Delete Kriteria -->
-                            <form action="database/controller.php" method="post" style="display: inline;">
-                              <input type="hidden" name="action" value="deleteData">
-                              <input type="hidden" name="table" value="kriteria">
-                              <input type="hidden" name="id" value="<?php echo $id; ?>">
-                              <button class="btn btn-icon btn-link btn-danger op-8" type="submit" onclick="return confirm('Yakin ingin menghapus data ini?')">
-                                <i class="fa fa-times"></i>
-                              </button>
-                            </form>
-                            <!-- End Delete Kriteria -->
-                          </center>
-                        </div>
-                    <?php
-                      }
-                    } else {
-                      echo "<p class='text-center'>Tidak ada data subkriteria tersedia.</p>";
-                    }
-                    ?>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- End of Tabel SubKriteria -->
-
             <!-- Hasil Perangkingan Card -->
             <div class="col-md-4">
               <div class="card card-round">
@@ -745,7 +671,6 @@ if (!isset($_SESSION)) {
                                   $namaPeserta = $a['nama'];
                                   $si = $a['si']; // nilai si hasil perhitungan normalisasi data
                                   $vi = $si / $totalBobot; // nilai vi di bagi seluruh nilai si
-
                                   addVi($idPeserta, $vi); // Menyimpan ke tabel mySqli
                               ?>
                                   <tr role="row" class="odd">
@@ -784,8 +709,8 @@ if (!isset($_SESSION)) {
                   <div class="table-responsive">
                     <div id="add-row_wrapper" class="dataTables_wrapper container-fluid dt-bootstrap4">
                       <!-- Utilitas Metode SMART -->
-                      <h5>Utilitas</h5>
                       <div class="row">
+                        <h5>Utilitas</h5>
                         <div class="col-sm-12">
                           <table id="basic-datatables" class="display table table-striped table-hover dataTable" role="grid" aria-describedby="add-row_info">
                             <thead>
@@ -808,16 +733,31 @@ if (!isset($_SESSION)) {
                                   $i += 1;
                                   $idPeserta = $a['id_peserta'];
                                   $namaPeserta = $a['nama'];
-                                  $u_status = ((($a['status_rumah'] - minU('status_rumah')) / (maxU('status_rumah') - minU('status_rumah'))) * 100) / 100;
-                                  $u_luas_bangunan = ((($a['luas_bangunan'] - minU('luas_bangunan')) / (maxU('luas_bangunan') - minU('luas_bangunan'))) * 100) / 100;
-                                  $u_jenis_lantai = ((($a['jenis_lantai'] - minU('jenis_lantai')) / (maxU('jenis_lantai') - minU('jenis_lantai'))) * 100) / 100;
-                                  $u_jenis_dinding = ((($a['jenis_dinding'] - minU('jenis_dinding')) / (maxU('jenis_dinding') - minU('jenis_dinding'))) * 100) / 100;
-                                  $u_pendidikan = ((($a['pendidikan'] - minU('pendidikan')) / (maxU('pendidikan') - minU('pendidikan'))) * 100) / 100;
-                                  $u_pekerjaan = ((($a['pekerjaan'] - minU('pekerjaan')) / (maxU('pekerjaan') - minU('pekerjaan'))) * 100) / 100;
-                                  $u_tanggungan = (((maxU('tanggungan') - $a['tanggungan']) / (maxU('tanggungan') - minU('tanggungan'))) * 100) / 100;
+                                  // $u_status = ((($a['status_rumah'] - minU('status_rumah')) / (maxU('status_rumah') - minU('status_rumah'))) * 100) / 100;
+                                  // $u_luas_bangunan = ((($a['luas_bangunan'] - minU('luas_bangunan')) / (maxU('luas_bangunan') - minU('luas_bangunan'))) * 100) / 100;
+                                  // $u_jenis_lantai = ((($a['jenis_lantai'] - minU('jenis_lantai')) / (maxU('jenis_lantai') - minU('jenis_lantai'))) * 100) / 100;
+                                  // $u_jenis_dinding = ((($a['jenis_dinding'] - minU('jenis_dinding')) / (maxU('jenis_dinding') - minU('jenis_dinding'))) * 100) / 100;
+                                  // $u_pendidikan = ((($a['pendidikan'] - minU('pendidikan')) / (maxU('pendidikan') - minU('pendidikan'))) * 100) / 100;
+                                  // $u_pekerjaan = ((($a['pekerjaan'] - minU('pekerjaan')) / (maxU('pekerjaan') - minU('pekerjaan'))) * 100) / 100;
+                                  // $u_tanggungan = (((maxU('tanggungan') - $a['tanggungan']) / (maxU('tanggungan') - minU('tanggungan'))) * 100) / 100;
 
-                                  // addVi($idPeserta, $vi); // Menyimpan ke tabel 
-                                ?>
+                                  //                           function calculateNormalization($value, $min, $max)
+                                  // {
+                                  //     if ($max - $min == 0) { // Cek apakah pembagi nol
+                                  //         return 0; // Atur hasilnya ke 0 atau nilai default lainnya
+                                  //     }
+                                  //     return (($value - $min) / ($max - $min)) * 100 / 100;
+                                  // }
+
+                                  $u_status = calculateNormalization($a['status_rumah'], minU('status_rumah'), maxU('status_rumah'));
+                                  $u_luas_bangunan = calculateNormalization($a['luas_bangunan'], minU('luas_bangunan'), maxU('luas_bangunan'));
+                                  $u_jenis_lantai = calculateNormalization($a['jenis_lantai'], minU('jenis_lantai'), maxU('jenis_lantai'));
+                                  $u_jenis_dinding = calculateNormalization($a['jenis_dinding'], minU('jenis_dinding'), maxU('jenis_dinding'));
+                                  $u_pendidikan = calculateNormalization($a['pendidikan'], minU('pendidikan'), maxU('pendidikan'));
+                                  $u_pekerjaan = calculateNormalization($a['pekerjaan'], minU('pekerjaan'), maxU('pekerjaan'));
+                                  $u_tanggungan = calculateNormalization(maxU('tanggungan') - $a['tanggungan'], 0, maxU('tanggungan') - minU('tanggungan'));
+
+                              ?>
                                   <tr role="row" class="odd">
                                     <td><?php echo ucwords(str_replace('_', ' ', $i)); ?></td>
                                     <td><?php echo ucwords(str_replace('_', ' ', $namaPeserta)); ?></td>
@@ -840,6 +780,117 @@ if (!isset($_SESSION)) {
                         </div>
                       </div>
                       <!-- End of Utilitas Metode SMART -->
+
+                      <!-- Nilai Akhir Metode SMART -->
+                      <div class="row">
+                        <h5>Nilai Akhir</h5>
+                        <div class="col-sm-12">
+                          <table id="basic-datatables" class="display table table-striped table-hover dataTable" role="grid" aria-describedby="add-row_info">
+                            <thead>
+                              <tr role="row">
+                                <th>No</th>
+                                <?php
+                                $columns = getColumnUSmart();
+                                foreach ($columns as $column): ?>
+                                  <th><?php echo ucwords(str_replace('u_', '', $column)); ?></th>
+                                <?php endforeach; ?>
+                                <th>Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <?php
+                              $i = 0;
+                              $result = getNormalisasiSubkriteria();
+                              if ($result && mysqli_num_rows($result) > 0) {
+                                while ($a = mysqli_fetch_array($result)) {
+                                  $i += 1;
+                                  $idPeserta = $a['id_peserta'];
+                                  $namaPeserta = $a['nama'];
+                                  // $u_status = getBobotWj('rumah') * (((($a['status_rumah'] - minU('status_rumah')) / (maxU('status_rumah') - minU('status_rumah'))) * 100) / 100);
+                                  // $u_luas_bangunan = getBobotWj('rumah') * ((($a['luas_bangunan'] - minU('luas_bangunan')) / (maxU('luas_bangunan') - minU('luas_bangunan'))) * 100) / 100;
+                                  // $u_jenis_lantai = getBobotWj('rumah') * ((($a['jenis_lantai'] - minU('jenis_lantai')) / (maxU('jenis_lantai') - minU('jenis_lantai'))) * 100) / 100;
+                                  // $u_jenis_dinding = getBobotWj('rumah') * ((($a['jenis_dinding'] - minU('jenis_dinding')) / (maxU('jenis_dinding') - minU('jenis_dinding'))) * 100) / 100;
+                                  // $u_pendidikan = getBobotWj('sosial_ekonomi') * ((($a['pendidikan'] - minU('pendidikan')) / (maxU('pendidikan') - minU('pendidikan'))) * 100) / 100;
+                                  // $u_pekerjaan = getBobotWj('sosial_ekonomi') * ((($a['pekerjaan'] - minU('pekerjaan')) / (maxU('pekerjaan') - minU('pekerjaan'))) * 100) / 100;
+                                  // $u_tanggungan = getBobotWj('tanggungan') * (((maxU('tanggungan') - $a['tanggungan']) / (maxU('tanggungan') - minU('tanggungan'))) * 100) / 100;
+
+                                  $u_status = calculateWeightedNormalization(
+                                    $a['status_rumah'],
+                                    minU('status_rumah'),
+                                    maxU('status_rumah'),
+                                    getBobotWj('rumah')
+                                  );
+
+                                  $u_luas_bangunan = calculateWeightedNormalization(
+                                    $a['luas_bangunan'],
+                                    minU('luas_bangunan'),
+                                    maxU('luas_bangunan'),
+                                    getBobotWj('rumah')
+                                  );
+
+                                  $u_jenis_lantai = calculateWeightedNormalization(
+                                    $a['jenis_lantai'],
+                                    minU('jenis_lantai'),
+                                    maxU('jenis_lantai'),
+                                    getBobotWj('rumah')
+                                  );
+
+                                  $u_jenis_dinding = calculateWeightedNormalization(
+                                    $a['jenis_dinding'],
+                                    minU('jenis_dinding'),
+                                    maxU('jenis_dinding'),
+                                    getBobotWj('rumah')
+                                  );
+
+                                  $u_pendidikan = calculateWeightedNormalization(
+                                    $a['pendidikan'],
+                                    minU('pendidikan'),
+                                    maxU('pendidikan'),
+                                    getBobotWj('sosial_ekonomi')
+                                  );
+
+                                  $u_pekerjaan = calculateWeightedNormalization(
+                                    $a['pekerjaan'],
+                                    minU('pekerjaan'),
+                                    maxU('pekerjaan'),
+                                    getBobotWj('sosial_ekonomi')
+                                  );
+
+                                  $u_tanggungan = calculateWeightedNormalization(
+                                    $a['tanggungan'],
+                                    minU('tanggungan'),
+                                    maxU('tanggungan'),
+                                    getBobotWj('tanggungan'),
+                                    true
+                                  );
+
+                                  $total = $u_status + $u_luas_bangunan + $u_jenis_lantai + $u_jenis_dinding + $u_pendidikan + $u_pekerjaan + $u_tanggungan;
+                              ?>
+                                  <tr role="row" class="odd">
+                                    <td><?php echo ucwords(str_replace('_', ' ', $i)); ?></td>
+                                    <td><?php echo ucwords(str_replace('_', ' ', $namaPeserta)); ?></td>
+                                    <td><?php echo number_format($u_status, 3); ?></td>
+                                    <td><?php echo number_format($u_luas_bangunan, 3); ?></td>
+                                    <td><?php echo number_format($u_jenis_lantai, 3); ?></td>
+                                    <td><?php echo number_format($u_jenis_dinding, 3); ?></td>
+                                    <td><?php echo number_format($u_pendidikan, 3); ?></td>
+                                    <td><?php echo number_format($u_pekerjaan, 3); ?></td>
+                                    <td><?php echo number_format($u_tanggungan, 3); ?></td>
+                                    <td><?php echo number_format($total, 3); ?></td>
+                                  </tr>
+                              <?php
+                                  addUSmart($idPeserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, $total);
+                                }
+                              } else {
+                                echo "<p class='text-center'>Tidak ada data kriteria tersedia.</p>";
+                              }
+                              ?>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <!-- End of Nilai Akhir Metode SMART -->
+
                     </div>
                   </div>
                 </div>
@@ -890,9 +941,6 @@ if (!isset($_SESSION)) {
   <!-- Kaiadmin JS -->
   <script src="assets/js/kaiadmin.min.js"></script>
 
-  <!-- Kaiadmin DEMO methods, don't include it in your project! -->
-  <script src="assets/js/setting-demo.js"></script>
-  <script src="assets/js/demo.js"></script>
   <script>
     $("#lineChart").sparkline([102, 109, 120, 99, 110, 105, 115], {
       type: "line",

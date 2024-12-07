@@ -50,6 +50,25 @@ function getData($table, $tipe)
     // }
 }
 
+function getBobotWj($namaKriteria)
+{
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT bobot_wj FROM kriteria WHERE nama = ?");
+        $stmt->execute([$namaKriteria]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result) {
+            return $result['bobot_wj'];
+        }
+        return null;
+    } catch (PDOException $e) {
+        echo "Error: " . $e->getMessage();
+        return null;
+    }
+}
+
+
 function getPesertaById($id)
 {
     global $pdo;
@@ -230,6 +249,12 @@ function deleteDataPeserta($id)
         $stmt2 = $pdo->prepare("DELETE FROM peserta WHERE id = ?");
         $stmt2->execute([$id]);
 
+        $stmt3 = $pdo->prepare("DELETE FROM utilitas_metode_smart WHERE id_peserta = ?");
+        $stmt3->execute([$id]);
+
+        $stmt4 = $pdo->prepare("DELETE FROM vektor_vi_si WHERE id_peserta = ?");
+        $stmt4->execute([$id]);
+
         $pdo->commit();
 
         header("Location: ../index.php");
@@ -268,7 +293,7 @@ function deleteDataPeserta($id)
 
 
 // Kriteria part
-function addKriteria($namaKriteria, $bobotKriteria, $tipe)
+function addKriteria($namaKriteria, $bobotKriteria, $bobotWj)
 {
     global $pdo;
 
@@ -282,10 +307,28 @@ function addKriteria($namaKriteria, $bobotKriteria, $tipe)
     }
 
     // Jika tidak ada duplikasi, menambahkan data ke database
-    $stmt = $pdo->prepare("INSERT INTO kriteria (nama, bobot, tipe) VALUES (?, ?, ?)");
-    $stmt->execute([$namaKriteria, $bobotKriteria, $tipe]);
+    $stmt = $pdo->prepare("INSERT INTO kriteria (nama, bobot, bobot_wj) VALUES (?, ?, ?)");
+    $stmt->execute([$namaKriteria, $bobotKriteria, $bobotWj]);
 
     header("Location: ../index.php");
+}
+
+function updateKriteria($id, $bobotWj)
+{
+    global $pdo;
+
+    if ($bobotWj == null || $bobotWj == 0) {
+        $stmt = $pdo->prepare("SELECT bobot_wj FROM kriteria WHERE id = ?");
+        $stmt->execute([$id]);
+        $currentData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $bobotWj = $currentData['bobot_wj'];
+    }
+
+    $stmt = $pdo->prepare("UPDATE kriteria SET bobot_wj = ? WHERE id = ?");
+    $stmt->execute([$bobotWj, $id]);
+
+    // header("Location: ../index.php");
+    // exit;
 }
 
 function editKriteria($id, $bobot)
@@ -325,6 +368,26 @@ function addNormalisasiSubKriteria($nama, $statusRumah, $luasBangunan, $jenisLan
     $stmt = $pdo->prepare("INSERT INTO normalisasi_subkriteria (nama, status_rumah, luas_bangunan, jenis_lantai, jenis_dinding, pendidikan, pekerjaan, tanggungan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([$nama, $statusRumah, $luasBangunan, $jenisLantai, $jenisDinding, $pendidikan, $pekerjaan, $tanggungan]);
     header("Location: ../index.php");
+}
+
+function calculateNormalization($value, $min, $max)
+{
+    if ($max - $min == 0) {
+        return 0;
+    }
+    return (($value - $min) / ($max - $min)) * 100 / 100;
+}
+
+function calculateWeightedNormalization($value, $min, $max, $weight, $reverse = false)
+{
+    if ($max - $min == 0) {
+        return 0;
+    }
+    $normalized = $reverse
+        ? ($max - $value) / ($max - $min)
+        : ($value - $min) / ($max - $min);
+
+    return $weight * $normalized;
 }
 
 function getNormalisasiSubkriteria()
@@ -462,8 +525,10 @@ function getColumnSKWN()
             $fieldName = $col['Field'];
 
             // Kecualikan kolom berdasarkan nama langsung atau pola
-            if (!in_array($fieldName, ['id', 'id_peserta', 'nama']) && // Nama langsung
-                !preg_match('/^(child_|rel_)/', $fieldName)) {         // Pola tertentu
+            if (
+                !in_array($fieldName, ['id', 'id_peserta', 'nama']) && // Nama langsung
+                !preg_match('/^(child_|rel_)/', $fieldName)
+            ) {         // Pola tertentu
                 $columns[] = $fieldName; // Tambahkan kolom lain apa adanya
             }
         }
@@ -472,21 +537,45 @@ function getColumnSKWN()
     return $columns;
 }
 
-function addUSmart($id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan)
+function addUSmart($id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, $total)
 {
     global $pdo;
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilitas_metode_smart WHERE id_peserta = ? AND total = ?");
-    $stmt->execute([$id_peserta, 0]);
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilitas_metode_smart WHERE id_peserta = ?");
+    $stmt->execute([$id_peserta]);
     $exists = $stmt->fetchColumn();
 
     if ($exists == 0) {
         $stmt = $pdo->prepare("INSERT utilitas_metode_smart (id_peserta, u_status, u_luas_bangunan, u_jenis_lantai, u_jenis_dinding, u_pendidikan, u_pekerjaan, u_tanggungan, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, 0]);
+        $stmt->execute([$id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, $total]);
     }
 
     if ($exists != 0) {
-        exit;
+        $stmt = $pdo->prepare("
+        UPDATE utilitas_metode_smart 
+        SET 
+            u_status = ?, 
+            u_luas_bangunan = ?, 
+            u_jenis_lantai = ?, 
+            u_jenis_dinding = ?, 
+            u_pendidikan = ?, 
+            u_pekerjaan = ?, 
+            u_tanggungan = ?, 
+            total = ? 
+        WHERE 
+            id_peserta = ?
+    ");
+        $stmt->execute([
+            $u_status,
+            $u_luas_bangunan,
+            $u_jenis_lantai,
+            $u_jenis_dinding,
+            $u_pendidikan,
+            $u_pekerjaan,
+            $u_tanggungan,
+            $total,
+            $id_peserta
+        ]);
     }
 }
 
@@ -575,7 +664,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 //     deleteCustomerAccount($_POST['id']);
                 //     break;
             case 'addKriteria':
-                addKriteria($_POST['namaKriteria'], $_POST['bobot'], $_POST['tipe']);
+                addKriteria($_POST['namaKriteria'], $_POST['bobot'], 0);
                 break;
             case 'editKriteria':
                 editKriteria($_POST['id'], $_POST['bobot']);
