@@ -1,2 +1,2 @@
 # Sipaza
- Sistem Informasi Penerima Zakat (WP dan SMART)
+ Sistem Informasi Penerima Zakat (AHP dan WP)
