@@ -214,7 +214,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0">
-                <input type="hidden" name="id" value="<?php echo $id ?>">
+                    <input type="hidden" name="id" value="<?php echo $id ?>">
                     <input type="hidden" name="action" value="editPeserta">
                     <button type="submit" class="btn btn-primary">
                         Edit
@@ -252,13 +252,24 @@
                         <div class="col-sm-6">
                             <div class="form-group form-group-default">
                                 <label for="namaKriteria" class="form-label">Nama Kriteria</label>
-                                <input id="namaKriteria" name="namaKriteria" type="text" class="form-control" placeholder="isikan kriteria" required>
+                                <input id="namaKriteria" name="namaKriteria" type="text" class="form-control" placeholder="isikan nama kriteria" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group form-group-default">
-                                <label for="bobot" class="form-label">Bobot</label>
-                                <input id="bobot" name="bobot" type="number" class="form-control" placeholder="isikan bobot kriteria" required>
+                                <label for="nilai" class="form-label">Nilai</label>
+                                <select id="nilai" name="nilai" type="number" class="form-control" required>
+                                    <option value="" disabled selected hidden>--pilih nilai kriteria</option>
+                                    <option value="1">Sama</option>
+                                    <option value="3">Sedikit Lebih Penting</option>
+                                    <option value="5">Cukup Penting</option>
+                                    <option value="7">Sangat Penting</option>
+                                    <option value="9">Mutlak Penting</option>
+                                    <option value="2">Sama, namun Sedikit Lebih penting</option>
+                                    <option value="4">Sedikit Lebih Penting, namun Cukup Penting</option>
+                                    <option value="6">Cukup Penting, namun Sangat Penting</option>
+                                    <option value="8">Sangat Penting, namun Mutlak Penting</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -304,14 +315,25 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group form-group-default">
-                                <label for="bobot" class="form-label">Bobot</label>
-                                <input id="bobot" name="bobot" type="number" class="form-control" placeholder="<?php echo $bobot ?>">
+                                <label for="nilai" class="form-label">Nilai</label>
+                                <select id="nilai" name="nilai" type="number" class="form-control" required>
+                                    <option value="<?php echo $nilai; ?>" hidden><?php echo $nilai; ?></option>
+                                    <option value="1">Sama</option>
+                                    <option value="3">Sedikit Lebih Penting</option>
+                                    <option value="5">Cukup Penting</option>
+                                    <option value="7">Sangat Penting</option>
+                                    <option value="9">Mutlak Penting</option>
+                                    <option value="2">Sama, namun Sedikit Lebih penting</option>
+                                    <option value="4">Sedikit Lebih Penting, namun Cukup Penting</option>
+                                    <option value="6">Cukup Penting, namun Sangat Penting</option>
+                                    <option value="8">Sangat Penting, namun Mutlak Penting</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
-                <input type="hidden" name="id" value="<?php echo $id ?>">
+                    <input type="hidden" name="id" value="<?php echo $id ?>">
                     <input type="hidden" name="action" value="editKriteria">
                     <button type="submit" class="btn btn-primary">
                         Edit

@@ -201,10 +201,8 @@ function addPeserta($nama, $statusRumah, $luasBangunan, $jenisLantai, $jenisDind
         (pow($pekerjaan, $bobotWjSosialEkonomi)) *
         (pow($tanggungan, (-1 * $bobotWjTanggungan)));
 
-    // menentukan vektor Vi
     $vektorVi = 0;
 
-    // Menambahkan data ke tabel normalisasi subkriteria
     $lastId = $pdo->lastInsertId();
     $stmt = $pdo->prepare("INSERT INTO normalisasi_subkriteria (id_peserta, status_rumah, luas_bangunan, jenis_lantai, jenis_dinding, pendidikan, pekerjaan, tanggungan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([$lastId, $statusrumah, $luasBangunan, $jenislantai, $jenisdinding, $pendidikan, $pekerjaan, $tanggungan]);
@@ -249,9 +247,6 @@ function deleteDataPeserta($id)
         $stmt2 = $pdo->prepare("DELETE FROM peserta WHERE id = ?");
         $stmt2->execute([$id]);
 
-        $stmt3 = $pdo->prepare("DELETE FROM utilitas_metode_smart WHERE id_peserta = ?");
-        $stmt3->execute([$id]);
-
         $stmt4 = $pdo->prepare("DELETE FROM vektor_vi_si WHERE id_peserta = ?");
         $stmt4->execute([$id]);
 
@@ -266,34 +261,8 @@ function deleteDataPeserta($id)
     }
 }
 
-
-// Customer part
-// function getCustomers()
-// {
-//     global $mySqliCon;
-//     $get = mysqli_query($mySqliCon, "SELECT * FROM account WHERE position = 'Customer'");
-//     return $get;
-// }
-
-// function addUser($username, $password)
-// {
-//     global $pdo;
-//     $stmt = $pdo->prepare("INSERT INTO account (username, password, role) VALUES (?, ?, ?)");
-//     $stmt->execute([$username, password_hash($password, PASSWORD_DEFAULT), "Petugas"]);
-//     header("Location: ../views/login.php");
-// }
-
-// function deleteEmployeeAccount($id)
-// {
-//     global $pdo;
-//     $stmt = $pdo->prepare("DELETE FROM account WHERE id = ? AND position != 'Customer'");
-//     $stmt->execute([$id]);
-//     header("Location: ../views/employee.php");
-// }
-
-
 // Kriteria part
-function addKriteria($namaKriteria, $bobotKriteria, $bobotWj)
+function addKriteria($namaKriteria, $nilai, $bobotKriteria, $bobotWj)
 {
     global $pdo;
 
@@ -307,31 +276,13 @@ function addKriteria($namaKriteria, $bobotKriteria, $bobotWj)
     }
 
     // Jika tidak ada duplikasi, menambahkan data ke database
-    $stmt = $pdo->prepare("INSERT INTO kriteria (nama, bobot, bobot_wj) VALUES (?, ?, ?)");
-    $stmt->execute([$namaKriteria, $bobotKriteria, $bobotWj]);
+    $stmt = $pdo->prepare("INSERT INTO kriteria (nama, nilai, bobot, bobot_wj) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$namaKriteria, $nilai, $bobotKriteria, $bobotWj]);
 
     header("Location: ../index.php");
 }
 
-function updateKriteria($id, $bobotWj)
-{
-    global $pdo;
-
-    if ($bobotWj == null || $bobotWj == 0) {
-        $stmt = $pdo->prepare("SELECT bobot_wj FROM kriteria WHERE id = ?");
-        $stmt->execute([$id]);
-        $currentData = $stmt->fetch(PDO::FETCH_ASSOC);
-        $bobotWj = $currentData['bobot_wj'];
-    }
-
-    $stmt = $pdo->prepare("UPDATE kriteria SET bobot_wj = ? WHERE id = ?");
-    $stmt->execute([$bobotWj, $id]);
-
-    // header("Location: ../index.php");
-    // exit;
-}
-
-function editKriteria($id, $bobot)
+function updateKriteria($id, $bobot)
 {
     global $pdo;
 
@@ -339,11 +290,30 @@ function editKriteria($id, $bobot)
         $stmt = $pdo->prepare("SELECT bobot FROM kriteria WHERE id = ?");
         $stmt->execute([$id]);
         $currentData = $stmt->fetch(PDO::FETCH_ASSOC);
-        $bobot = $currentData['bobot'];
+        $bobot = $currentData['bobot_wj'];
+        $bobotWj = $currentData['bobot_wj'];
     }
 
-    $stmt = $pdo->prepare("UPDATE kriteria SET bobot = ? WHERE id = ?");
-    $stmt->execute([$bobot, $id]);
+    $stmt = $pdo->prepare("UPDATE kriteria SET bobot = ?, bobot_wj = ? WHERE id = ?");
+    $stmt->execute([$bobot, $bobotWj, $id]);
+
+    // header("Location: ../index.php");
+    // exit;
+}
+
+function editKriteria($id, $nilai)
+{
+    global $pdo;
+
+    if ($nilai == null || $nilai == 0) {
+        $stmt = $pdo->prepare("SELECT nilai FROM kriteria WHERE id = ?");
+        $stmt->execute([$id]);
+        $currentData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $nilai = $currentData['nilai'];
+    }
+
+    $stmt = $pdo->prepare("UPDATE kriteria SET nilai = ? WHERE id = ?");
+    $stmt->execute([$nilai, $id]);
 
     header("Location: ../index.php");
     exit;
@@ -537,48 +507,6 @@ function getColumnSKWN()
     return $columns;
 }
 
-function addUSmart($id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, $total)
-{
-    global $pdo;
-
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilitas_metode_smart WHERE id_peserta = ?");
-    $stmt->execute([$id_peserta]);
-    $exists = $stmt->fetchColumn();
-
-    if ($exists == 0) {
-        $stmt = $pdo->prepare("INSERT utilitas_metode_smart (id_peserta, u_status, u_luas_bangunan, u_jenis_lantai, u_jenis_dinding, u_pendidikan, u_pekerjaan, u_tanggungan, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$id_peserta, $u_status, $u_luas_bangunan, $u_jenis_lantai, $u_jenis_dinding, $u_pendidikan, $u_pekerjaan, $u_tanggungan, $total]);
-    }
-
-    if ($exists != 0) {
-        $stmt = $pdo->prepare("
-        UPDATE utilitas_metode_smart 
-        SET 
-            u_status = ?, 
-            u_luas_bangunan = ?, 
-            u_jenis_lantai = ?, 
-            u_jenis_dinding = ?, 
-            u_pendidikan = ?, 
-            u_pekerjaan = ?, 
-            u_tanggungan = ?, 
-            total = ? 
-        WHERE 
-            id_peserta = ?
-    ");
-        $stmt->execute([
-            $u_status,
-            $u_luas_bangunan,
-            $u_jenis_lantai,
-            $u_jenis_dinding,
-            $u_pendidikan,
-            $u_pekerjaan,
-            $u_tanggungan,
-            $total,
-            $id_peserta
-        ]);
-    }
-}
-
 function maxU($column)
 {
     global $mySqliCon;
@@ -613,16 +541,13 @@ function minU($column)
 // Log out part
 function logout()
 {
-    // If session isn't start, sessions start
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
-    // all session variable has been deleted
     session_unset();
     session_destroy();
 
-    // If session is running, Cookie has been delete
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
         setcookie(
@@ -664,17 +589,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 //     deleteCustomerAccount($_POST['id']);
                 //     break;
             case 'addKriteria':
-                addKriteria($_POST['namaKriteria'], $_POST['bobot'], 0);
+                addKriteria($_POST['namaKriteria'], $_POST['nilai'], 0,0);
                 break;
             case 'editKriteria':
-                editKriteria($_POST['id'], $_POST['bobot']);
+                editKriteria($_POST['id'], $_POST['nilai']);
                 break;
-            case 'addSubKriteria':
-                // addNormalisasiSubKriteria($_POST['namaKriteria'], $_POST['bobot']);
-                break;
-                // case 'editSubKriteria':
-                //     editSubKriteria($_POST['id'], $_POST['namaKriteria']);
-                //     break;
             case 'logout':
                 logout();
                 break;
@@ -699,23 +618,6 @@ function calculateWP($peserta, $kriteria)
     return $result;
 }
 
-// Metode SMART
-function calculateSMART($peserta, $kriteria)
-{
-    $result = [];
-    foreach ($peserta as $p) {
-        $smart_score = 0;
-        foreach ($kriteria as $k) {
-            $value = $p[$k['nama']]; // Asumsi nama kolom sesuai kriteria
-            $weight = $k['bobot'] / array_sum(array_column($kriteria, 'bobot'));
-            $normalized_value = $value / max(array_column($peserta, $k['nama'])); // Normalisasi
-            $smart_score += $normalized_value * $weight;
-        }
-        $result[] = ['id_peserta' => $p['id'], 'smart_score' => $smart_score];
-    }
-    return $result;
-}
-
 // Final Score
 function calculateFinalScore($wp_results, $smart_results)
 {
@@ -731,19 +633,4 @@ function calculateFinalScore($wp_results, $smart_results)
         ];
     }
     return $final_scores;
-}
-
-// Simpan Hasil ke DB
-function saveResultsToDatabase($final_scores, $pdo)
-{
-    $stmt = $pdo->prepare("INSERT INTO hasil_perhitungan (id_penerima, wp_score, smart_score, final_score) 
-                           VALUES (:id_penerima, :wp_score, :smart_score, :final_score)");
-    foreach ($final_scores as $score) {
-        $stmt->execute([
-            ':id_penerima' => $score['id_peserta'],
-            ':wp_score' => $score['wp_score'],
-            ':smart_score' => $score['smart_score'],
-            ':final_score' => $score['final_score']
-        ]);
-    }
 }
