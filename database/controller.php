@@ -490,16 +490,15 @@ function getColumnSKWN()
     if ($resultColumns && mysqli_num_rows($resultColumns) > 0) {
         while ($col = mysqli_fetch_assoc($resultColumns)) {
             // if ($col['Field'] !== 'id' && $col['Field'] !== 'id_peserta' && !in_array($col, ['Nama'])) { // Kecualikan kolom 'id', 'id_peserta', dan 'nama'
-            //     $columns[] = $col['Field']; // Tambahkan kolom lain apa adanya
+            //     $columns[] = $col['Field']; 
             // }
             $fieldName = $col['Field'];
 
-            // Kecualikan kolom berdasarkan nama langsung atau pola
             if (
-                !in_array($fieldName, ['id', 'id_peserta', 'nama']) && // Nama langsung
+                !in_array($fieldName, ['id', 'id_peserta', 'nama']) && 
                 !preg_match('/^(child_|rel_)/', $fieldName)
-            ) {         // Pola tertentu
-                $columns[] = $fieldName; // Tambahkan kolom lain apa adanya
+            ) {         
+                $columns[] = $fieldName; 
             }
         }
     }
@@ -602,35 +601,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 //---------------------- Metode ----------------------\\
-// Metode WP
-function calculateWP($peserta, $kriteria)
-{
-    $result = [];
-    foreach ($peserta as $p) {
-        $wp_score = 1;
-        foreach ($kriteria as $k) {
-            $value = $p[$k['nama']]; // Asumsi nama kolom sesuai kriteria
-            $weight = $k['bobot'] / array_sum(array_column($kriteria, 'bobot'));
-            $wp_score *= pow($value, $weight);
-        }
-        $result[] = ['id_peserta' => $p['id'], 'wp_score' => $wp_score];
-    }
-    return $result;
-}
 
-// Final Score
-function calculateFinalScore($wp_results, $smart_results)
-{
-    $final_scores = [];
-    foreach ($wp_results as $wp) {
-        $smart = array_filter($smart_results, fn($s) => $s['id_peserta'] === $wp['id_peserta']);
-        $final_score = $wp['wp_score'] + current($smart)['smart_score'];
-        $final_scores[] = [
-            'id_peserta' => $wp['id_peserta'],
-            'wp_score' => $wp['wp_score'],
-            'smart_score' => current($smart)['smart_score'],
-            'final_score' => $final_score,
-        ];
-    }
-    return $final_scores;
+// Metode WP
+function metodedWP($bobotKriteria, $peserta) {
+
 }
