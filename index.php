@@ -782,51 +782,63 @@ if (!isset($_SESSION)) {
                                   <th>Nama</th>
                                   <th>Si</th>
                                   <th>Vi</th>
+                                  <th>Ranking</th>
                                 </tr>
                               </thead>
-                              <tfoot>
-                                <tr>
-                                  <th></th>
-                                  <th></th>
-                                  <th></th>
-                                  <th>Total Vi = <?php
-                                                  global $mySqliCon;
-                                                  $query = "SELECT SUM(vi) AS vektorVi FROM vektor_vi_si";
-                                                  $resultCount = mysqli_query($mySqliCon, $query);
-                                                  $row = mysqli_fetch_assoc($resultCount);
-                                                  $totalBobot = $row['vektorVi'];
-                                                  echo number_format($totalBobot, 1);
-                                                  ?> </th>
-                                </tr>
-                              </tfoot>
                               <tbody>
                                 <?php
-                                // global $mySqliCon;
-                                // $query = "SELECT SUM(si) AS vektorSi FROM vektor_vi_si";
-                                // $resultCount = mysqli_query($mySqliCon, $query);
-                                // if ($resultCount) {
-                                //   $row = mysqli_fetch_assoc($resultCount);
-                                //   $totalBobot = $row['vektorSi'];
-                                // } else {
-                                //   echo "Error: " . mysqli_error($mySqliCon);
-                                // }
+                                // Mengambil data peserta
+                                $resultPeserta = getNormalisasiSubkriteria();
+                                if ($resultPeserta && mysqli_num_rows($resultPeserta) > 0) {
+                                  // Mengambil total bobot Si
+                                  global $mySqliCon;
+                                  $query = "SELECT SUM(si) AS vektorSi FROM vektor_vi_si";
+                                  $resultCount = mysqli_query($mySqliCon, $query);
+                                  if ($resultCount) {
+                                    $row = mysqli_fetch_assoc($resultCount);
+                                    $totalBobot = $row['vektorSi'];
+                                  } else {
+                                    echo "Error: " . mysqli_error($mySqliCon);
+                                  }
 
-                                $i = 0;
-                                $result = getSiVi();
-                                if ($result && mysqli_num_rows($result) > 0) {
-                                  while ($a = mysqli_fetch_array($result)) {
-                                    $i += 1;
+
+                                  $i = 0;
+                                  while ($a = mysqli_fetch_array($resultPeserta)) {
                                     $idPeserta = $a['id_peserta'];
                                     $namaPeserta = $a['nama'];
-                                    $si = $a['si'];
-                                    $vi = $si / $totalBobot;
+                                    $statusrumah = $a['status_rumah'];
+                                    $luasbangunan = $a['luas_bangunan'];
+                                    $jenislantai = $a['jenis_lantai'];
+                                    $jenisdinding = $a['jenis_dinding'];
+                                    $pendidikan = $a['pendidikan'];
+                                    $pekerjaan = $a['pekerjaan'];
+                                    $tanggungan = $a['tanggungan'];
+
+                                    // Perhitungan vektor Si
+                                    $vektorSi = (pow($statusrumah, $averageR)) *
+                                      (pow($luasbangunan, $averageR)) *
+                                      (pow($jenislantai, $averageR)) *
+                                      (pow($jenisdinding, $averageR)) *
+                                      (pow($pendidikan, $averageSE)) *
+                                      (pow($pekerjaan, $averageSE)) *
+                                      (pow($tanggungan, (-1 * $averageT)));
+
+                                    $i += 1;
+                                    $totalSi[$i - 1] = $vektorSi;
+
+                                    // Perhitungan Vi
+                                    addViSi($idPeserta, $vektorSi, 0);
+                                    $totalVi = countVektorWp("si");
+                                    $vi = $vektorSi / $totalVi;
                                     addVi($idPeserta, $vi);
+
+                                    // Menampilkan data dalam tabel
                                 ?>
                                     <tr role="row" class="odd">
                                       <td><?php echo ucwords(str_replace('_', ' ', $i)); ?></td>
                                       <td><?php echo ucwords(str_replace('_', ' ', $namaPeserta)); ?></td>
-                                      <td><?php echo ucwords(str_replace('_', ' ', $si)); ?></td>
-                                      <td><?php echo ucwords(str_replace('_', ' ', $vi)); ?></td>
+                                      <td><?php echo number_format($totalSi[$i - 1], 3); ?></td>
+                                      <td><?php echo number_format($vi, 3); ?></td>
                                     </tr>
                                 <?php
                                   }
@@ -834,7 +846,20 @@ if (!isset($_SESSION)) {
                                   echo "<p class='text-center'>Tidak ada data kriteria tersedia.</p>";
                                 }
                                 ?>
+
                               </tbody>
+                              <tfoot>
+                                <tr>
+                                  <th></th>
+                                  <th></th>
+                                  <th></th>
+                                  <th>Total Vi =
+                                    <?php
+                                    $totalBobot = countVektorWp("vi");
+                                    echo number_format($totalBobot, 1);
+                                    ?> </th>
+                                </tr>
+                              </tfoot>
                             </table>
                           </div>
                         </div>

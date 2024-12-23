@@ -389,8 +389,8 @@ function addViSi($id_peserta, $si, $vi)
 {
     global $pdo;
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM vektor_vi_si WHERE id_peserta = ? AND si = ? AND vi = ?");
-    $stmt->execute([$id_peserta, $si, $vi]);
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM vektor_vi_si WHERE id_peserta = ?");
+    $stmt->execute([$id_peserta]);
     $exists = $stmt->fetchColumn();
 
     if ($exists == 0) {
@@ -399,7 +399,8 @@ function addViSi($id_peserta, $si, $vi)
     }
 
     if ($exists != 0) {
-        exit;
+        $stmt = $pdo->prepare("UPDATE vektor_vi_si SET si = ?, vi = ? WHERE id_peserta = ?");
+        $stmt->execute([$si, $vi, $id_peserta]);
     }
 }
 
@@ -495,10 +496,10 @@ function getColumnSKWN()
             $fieldName = $col['Field'];
 
             if (
-                !in_array($fieldName, ['id', 'id_peserta', 'nama']) && 
+                !in_array($fieldName, ['id', 'id_peserta', 'nama']) &&
                 !preg_match('/^(child_|rel_)/', $fieldName)
-            ) {         
-                $columns[] = $fieldName; 
+            ) {
+                $columns[] = $fieldName;
             }
         }
     }
@@ -535,6 +536,15 @@ function minU($column)
     }
 
     return $nilaiMin;
+}
+
+function countVektorWp($vektor)
+{
+    global $mySqliCon;
+    $query = "SELECT SUM($vektor) AS vektor FROM vektor_vi_si";
+    $resultCount = mysqli_query($mySqliCon, $query);
+    $row = mysqli_fetch_assoc($resultCount);
+    return $row['vektor'];
 }
 
 // Log out part
@@ -588,7 +598,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 //     deleteCustomerAccount($_POST['id']);
                 //     break;
             case 'addKriteria':
-                addKriteria($_POST['namaKriteria'], $_POST['nilai'], 0,0);
+                addKriteria($_POST['namaKriteria'], $_POST['nilai'], 0, 0);
                 break;
             case 'editKriteria':
                 editKriteria($_POST['id'], $_POST['nilai']);
@@ -603,6 +613,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 //---------------------- Metode ----------------------\\
 
 // Metode WP
-function metodedWP($bobotKriteria, $peserta) {
-
+function metodeWPtoVektorSi($bobotKriteria, $peserta) {
+    
 }
